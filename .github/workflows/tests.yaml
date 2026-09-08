@@ -22,10 +22,10 @@ jobs:
     name: Ruff
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
         with:
           persist-credentials: false
-      - uses: astral-sh/setup-uv@v6
+      - uses: astral-sh/setup-uv@v7
       - name: ruff check
         run: uvx ruff@0.16.3 check .
       - name: ruff format --check
@@ -62,10 +62,10 @@ jobs:
           - "2026.9.0" # documented minimum
           - "${{ needs.resolve-latest.outputs.version }}" # latest stable, resolved above
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
         with:
           persist-credentials: false
-      - uses: astral-sh/setup-uv@v6
+      - uses: astral-sh/setup-uv@v7
       - name: Provision HA ${{ matrix.ha }} lane
         run: python3 scripts/ci_provision.py "${{ matrix.ha }}" .venv
       - name: Import smoke test (fresh process)
