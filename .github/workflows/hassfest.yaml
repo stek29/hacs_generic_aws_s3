@@ -1,0 +1,23 @@
+name: Hassfest
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+  schedule:
+    # Daily so a new Home Assistant release is exercised without a commit.
+    - cron: "17 4 * * *"
+
+permissions:
+  contents: read
+
+jobs:
+  hassfest:
+    name: hassfest
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+      - uses: home-assistant/actions/hassfest@master

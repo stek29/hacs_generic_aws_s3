@@ -1,0 +1,23 @@
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      actions:
+        patterns: ["*"]
+
+  - package-ecosystem: pip
+    directory: /
+    schedule:
+      interval: weekly
+    # Only development tooling is declared here (see pyproject.toml
+    # [dependency-groups].dev). The runtime SDK stack is provided by Home
+    # Assistant; do not let an update introduce a second botocore/aiobotocore
+    # pin.
+    ignore:
+      - dependency-name: homeassistant
+      - dependency-name: aiobotocore
+      - dependency-name: botocore
+      - dependency-name: boto3

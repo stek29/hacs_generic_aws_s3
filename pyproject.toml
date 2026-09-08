@@ -1,0 +1,70 @@
+[project]
+name = "generic-s3-backup"
+version = "0.1.0"
+description = "Home Assistant custom integration exposing arbitrary S3-compatible storage as a backup destination."
+readme = "README.md"
+requires-python = ">=3.14.2"
+license = "0BSD"
+license-files = ["LICENSE"]
+authors = [{ name = "Viktor Oreshkin", email = "imselfish@stek29.rocks" }]
+
+[project.urls]
+Homepage = "https://github.com/stek29/hacs_generic_aws_s3"
+Issues = "https://github.com/stek29/hacs_generic_aws_s3/issues"
+
+# This project ships a Home Assistant custom integration, not an installable
+# distribution (see [tool.uv] below). The runtime dependencies (homeassistant,
+# and through it the aws_s3 integration's aiobotocore/botocore stack) are
+# provided by the Home Assistant instance; see
+# custom_components/generic_s3/manifest.json. Only dev tooling is declared here.
+[dependency-groups]
+dev = [
+  "homeassistant==2026.9.0",
+  "pytest-homeassistant-custom-component",
+  "pytest",
+  "pytest-asyncio",
+  "pytest-cov",
+  "ruff==0.16.3",
+]
+
+[tool.uv]
+package = false
+
+[tool.ruff]
+target-version = "py314"
+line-length = 88
+src = ["custom_components", "tests"]
+
+[tool.ruff.lint]
+select = [
+  "A", "ANN", "ASYNC", "B", "BLE", "C4", "D", "E", "F", "FA", "I", "ICN",
+  "ISC", "LOG", "N", "PGH", "PIE", "PL", "PT", "RET", "RSE", "RUF", "SIM",
+  "SLF", "T20", "TID", "TRY", "UP", "W",
+]
+ignore = [
+  "D203", "D212",      # conflicting docstring rules
+  "PLR2004",           # magic values are fine in tests and small checks
+  "TRY003",            # long messages live in translations/en.json
+  "ISC001",            # handled by the formatter
+  "ANN401",            # BackupAgentPlatformProtocol mandates **kwargs: Any
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["ANN", "D", "PLR0913", "SLF001", "S101"]
+"scripts/*" = ["T201", "S603", "S607", "PLR0914", "C901"]
+
+[tool.ruff.lint.isort]
+force-sort-within-sections = true
+known-first-party = ["custom_components.generic_s3"]
+combine-as-imports = true
+
+[tool.ruff.lint.pydocstyle]
+convention = "pep257"
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+addopts = "-q -p no:cacheprovider --strict-markers -m 'not live'"
+markers = [
+  "live: end-to-end tests that talk to a real S3-compatible backend (opt-in; excluded by default)",
+]

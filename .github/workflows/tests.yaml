@@ -1,0 +1,76 @@
+name: Tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+  schedule:
+    # Daily so a newly published stable Home Assistant release is tested
+    # without any repository commit.
+    - cron: "41 4 * * *"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: tests-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint:
+    name: Ruff
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@v6
+      - name: ruff check
+        run: uvx ruff@0.16.3 check .
+      - name: ruff format --check
+        run: uvx ruff@0.16.3 format --check .
+
+  resolve-latest:
+    name: Resolve latest stable HA
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.pick.outputs.version }}
+    steps:
+      - id: pick
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          version="$(
+            curl -fsSL \
+              -H 'Accept: application/vnd.github+json' \
+              -H "Authorization: Bearer ${GH_TOKEN}" \
+              https://api.github.com/repos/home-assistant/core/releases/latest \
+            | python3 -c 'import json,sys; print(json.load(sys.stdin)["tag_name"])'
+          )"
+          echo "version=${version}" >> "$GITHUB_OUTPUT"
+          echo "::notice::latest stable Home Assistant = ${version}"
+
+  test:
+    name: HA ${{ matrix.ha }}
+    needs: resolve-latest
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        ha:
+          - "2026.9.0" # documented minimum
+          - "${{ needs.resolve-latest.outputs.version }}" # latest stable, resolved above
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@v6
+      - name: Provision HA ${{ matrix.ha }} lane
+        run: python3 scripts/ci_provision.py "${{ matrix.ha }}" .venv
+      - name: Import smoke test (fresh process)
+        run: |
+          .venv/bin/python -c "from custom_components.generic_s3 import config_flow"
+          .venv/bin/python -c "from custom_components.generic_s3.backup import S3BackupAgent"
+      - name: Pytest
+        run: .venv/bin/python -m pytest
