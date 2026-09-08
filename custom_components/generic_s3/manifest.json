@@ -9,5 +9,5 @@
   "iot_class": "cloud_polling",
   "issue_tracker": "https://github.com/stek29/hacs_generic_aws_s3/issues",
   "loggers": ["aiobotocore", "botocore"],
-  "version": "0.1.0"
+  "version": "0.1.1"
 }
