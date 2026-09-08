@@ -19,7 +19,7 @@ Issues = "https://github.com/stek29/hacs_generic_aws_s3/issues"
 # custom_components/generic_s3/manifest.json. Only dev tooling is declared here.
 [dependency-groups]
 dev = [
-  "homeassistant==2026.9.0",
+  "homeassistant==2026.8.0",
   "pytest-homeassistant-custom-component",
   "pytest",
   "pytest-asyncio",

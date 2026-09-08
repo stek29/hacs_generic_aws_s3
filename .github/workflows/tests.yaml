@@ -59,7 +59,7 @@ jobs:
       fail-fast: false
       matrix:
         ha:
-          - "2026.9.0" # documented minimum
+          - "2026.8.0" # documented minimum
           - "${{ needs.resolve-latest.outputs.version }}" # latest stable, resolved above
     steps:
       - uses: actions/checkout@v7
@@ -74,3 +74,50 @@ jobs:
           .venv/bin/python -c "from custom_components.generic_s3.backup import S3BackupAgent"
       - name: Pytest
         run: .venv/bin/python -m pytest
+
+  live:
+    name: Live S3 (HA ${{ matrix.ha }})
+    needs: resolve-latest
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        ha:
+          - "2026.8.0" # documented minimum
+          - "${{ needs.resolve-latest.outputs.version }}" # latest stable, resolved above
+    env:
+      AWS_ACCESS_KEY_ID: testkey
+      AWS_SECRET_ACCESS_KEY: testsecret
+      AWS_DEFAULT_REGION: us-east-1
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@v7
+      - name: Start VersityGW
+        run: |
+          docker volume create gs3vgw
+          docker run -d --name versitygw -p 7070:7070 \
+            -e ROOT_ACCESS_KEY_ID=testkey \
+            -e ROOT_SECRET_ACCESS_KEY=testsecret \
+            -v gs3vgw:/data \
+            versity/versitygw:v1.8.0 posix /data
+          for _ in $(seq 1 30); do
+            code="$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:7070/ || true)"
+            [ "$code" != "000" ] && { echo "VersityGW up (HTTP $code)"; break; }
+            sleep 1
+          done
+          aws --endpoint-url http://127.0.0.1:7070 s3 mb s3://ha-live-test
+      - name: Provision HA ${{ matrix.ha }} lane
+        run: python3 scripts/ci_provision.py "${{ matrix.ha }}" .venv
+      - name: Live lifecycle test
+        env:
+          GENERIC_S3_LIVE_ENDPOINT: http://127.0.0.1:7070
+          GENERIC_S3_LIVE_BUCKET: ha-live-test
+          GENERIC_S3_LIVE_ACCESS_KEY: testkey
+          GENERIC_S3_LIVE_SECRET_KEY: testsecret
+          GENERIC_S3_LIVE_ADDRESSING_STYLE: path
+        run: .venv/bin/python -m pytest -m live tests/test_live_backup.py
+      - name: VersityGW logs
+        if: always()
+        run: docker logs versitygw || true

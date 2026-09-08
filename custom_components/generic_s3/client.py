@@ -41,6 +41,11 @@ async def async_get_client(
     compatible or that all checksum/trailer behaviour is disabled. TLS
     verification, payload signing and the signing implementation are left at
     botocore defaults.
+
+    ``warm_up_loader_caches`` is an ``aiobotocore`` 3.x ``AioConfig`` option;
+    it is why the integration's minimum Home Assistant is 2026.8.0, the first
+    release whose ``aws_s3`` integration pins ``aiobotocore==3.7.0`` (2026.7.x
+    and earlier ship ``aiobotocore==2.21.1``, which rejects the keyword).
     """
     config_kwargs: dict[str, object] = {
         "warm_up_loader_caches": True,

@@ -8,11 +8,13 @@ It is a thin adapter over Home Assistant's built-in `aws_s3` integration:
 `S3BackupAgent` is subclassed with only the integration domain changed, so all
 transfer, listing, multipart and metadata handling is inherited. The trade-off
 is that it depends on Home Assistant internals with no stability guarantee — a
-core release can break it until it's updated. CI runs hassfest, HACS validation
-and the test suite daily against the minimum and the latest stable Home
-Assistant.
+core release can break it until it's updated. CI runs hassfest, HACS validation,
+the test suite, and an end-to-end lifecycle test against a real S3 backend
+(VersityGW) daily against the minimum and the latest stable Home Assistant.
 
-**Minimum Home Assistant:** 2026.9.0.
+**Minimum Home Assistant:** 2026.8.0 — the first release whose `aws_s3`
+integration ships `aiobotocore` 3.x, which the client relies on. Earlier
+releases are not supported.
 
 ## Install
 
