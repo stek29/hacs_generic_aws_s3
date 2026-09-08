@@ -1,0 +1,112 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Add a Generic S3 backup destination",
+        "description": "Connect an S3-compatible object store as a Home Assistant backup destination. Home Assistant still owns backup creation, encryption and restore; this only adds a place to store them.",
+        "data": {
+          "endpoint_url": "Endpoint URL",
+          "region": "Region",
+          "bucket": "Bucket",
+          "access_key_id": "Access key ID",
+          "secret_access_key": "Secret access key",
+          "prefix": "Prefix",
+          "addressing_style": "Addressing style"
+        },
+        "data_description": {
+          "endpoint_url": "Full HTTP or HTTPS URL of the S3 API, scheme and host only (a host name, or an IP address and port). Do not put the bucket name in the URL. Plain HTTP is accepted for local deployments but sends credentials in the clear.",
+          "region": "Signing region the backend expects. Must match the region the bucket was created in or the backend's configured region. Many self-hosted servers accept us-east-1.",
+          "bucket": "Name of an existing bucket. This integration never creates or deletes buckets.",
+          "access_key_id": "Static S3 access key ID.",
+          "secret_access_key": "Static S3 secret access key. Stored in the config entry; treat the Home Assistant configuration as sensitive.",
+          "prefix": "Optional key prefix inside the bucket. Leave empty to use the bucket root. Only leading and trailing slashes are stripped. A prefix is not an access-control boundary.",
+          "addressing_style": "Leave on Automatic unless the backend requires a specific style. Path style puts the bucket in the URL path; virtual-hosted style puts it in the hostname and needs matching DNS and TLS."
+        }
+      },
+      "reconfigure": {
+        "title": "Reconfigure the Generic S3 backup destination",
+        "description": "Change the connection settings for this destination. Existing remote backups are not moved, copied or deleted. Leave the secret access key blank to keep the stored one.",
+        "data": {
+          "endpoint_url": "Endpoint URL",
+          "region": "Region",
+          "bucket": "Bucket",
+          "access_key_id": "Access key ID",
+          "secret_access_key": "Secret access key",
+          "prefix": "Prefix",
+          "addressing_style": "Addressing style"
+        },
+        "data_description": {
+          "endpoint_url": "Full HTTP or HTTPS URL of the S3 API. Do not put the bucket name in the URL.",
+          "region": "Signing region the backend expects.",
+          "bucket": "Name of an existing bucket.",
+          "access_key_id": "Static S3 access key ID.",
+          "secret_access_key": "Leave blank to keep the current secret. Enter a new value to replace it.",
+          "prefix": "Optional key prefix. Clear this field to move the destination back to the bucket root.",
+          "addressing_style": "Automatic, path or virtual-hosted."
+        }
+      },
+      "reauth_confirm": {
+        "title": "Update Generic S3 credentials",
+        "description": "Enter valid credentials for the same destination ({name}). Nothing else about the destination changes.",
+        "data": {
+          "access_key_id": "Access key ID",
+          "secret_access_key": "Secret access key"
+        },
+        "data_description": {
+          "access_key_id": "Static S3 access key ID.",
+          "secret_access_key": "Static S3 secret access key."
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Could not reach the endpoint. Check the URL, port, DNS and network connectivity, then try again.",
+      "invalid_auth": "The backend rejected these credentials. Check the access key ID, the secret access key and the region.",
+      "access_denied": "The credentials are valid but not allowed to do this. Check the bucket and object permissions on the credentials, or that a prefix-restricted policy still permits listing this bucket.",
+      "bucket_unavailable": "The bucket could not be found or is not accessible with these credentials. Confirm the bucket name and that it exists on this endpoint.",
+      "wrong_region": "The bucket appears to be in a different region than the one entered. Set the region to match the backend.",
+      "invalid_endpoint_url": "Enter a valid HTTP or HTTPS URL with no username, password, query string or fragment.",
+      "invalid_bucket_name": "The bucket name is not valid for S3.",
+      "unknown": "Unexpected error while validating the destination. Check the Home Assistant logs for details."
+    },
+    "abort": {
+      "already_configured": "A backup destination with the same endpoint, bucket and prefix already exists.",
+      "reauth_successful": "Credentials updated.",
+      "reconfigure_successful": "Destination updated."
+    }
+  },
+  "selector": {
+    "addressing_style": {
+      "options": {
+        "auto": "Automatic (let the SDK decide)",
+        "path": "Path style (endpoint/bucket/key)",
+        "virtual": "Virtual-hosted style (bucket.endpoint/key)"
+      }
+    }
+  },
+  "exceptions": {
+    "cannot_connect": {
+      "message": "Could not reach the S3 endpoint. This is usually temporary; Home Assistant will retry."
+    },
+    "invalid_auth": {
+      "message": "The S3 backend rejected the stored credentials. Update them to continue."
+    },
+    "access_denied": {
+      "message": "The stored credentials are not allowed to access this bucket. Review the bucket and object permissions, or a prefix-restricted policy that blocks listing the bucket."
+    },
+    "bucket_unavailable": {
+      "message": "The configured bucket could not be found or is not accessible with the stored credentials."
+    },
+    "wrong_region": {
+      "message": "The bucket is in a different region than configured. Reconfigure the destination with the correct region."
+    },
+    "invalid_endpoint_url": {
+      "message": "The configured endpoint URL is not usable. Reconfigure the destination with a valid HTTP or HTTPS URL."
+    },
+    "invalid_bucket_name": {
+      "message": "The configured bucket name is not valid for S3."
+    },
+    "unknown": {
+      "message": "Unexpected error while setting up the S3 backup destination. Check the Home Assistant logs for details."
+    }
+  }
+}

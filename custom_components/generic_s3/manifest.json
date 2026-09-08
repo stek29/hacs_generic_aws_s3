@@ -1,0 +1,13 @@
+{
+  "domain": "generic_s3",
+  "name": "Generic S3 Backup",
+  "codeowners": ["@stek29"],
+  "config_flow": true,
+  "dependencies": ["aws_s3", "backup"],
+  "documentation": "https://github.com/stek29/hacs_generic_aws_s3",
+  "integration_type": "service",
+  "iot_class": "cloud_polling",
+  "issue_tracker": "https://github.com/stek29/hacs_generic_aws_s3/issues",
+  "loggers": ["aiobotocore", "botocore"],
+  "version": "0.1.0"
+}
