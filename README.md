@@ -59,6 +59,12 @@ multipart actions (`s3:PutObject` covers `CreateMultipartUpload` /
   a disjoint, non-nested prefix.
 - Metadata objects (`*.metadata.json`) are stored unencrypted, as upstream
   writes them.
+- On first connect you may see a one-time log warning about a *"blocking call to
+  `load_verify_locations`"* naming this integration. It is harmless: `aiobotocore`
+  < 3.8.0 (the version Home Assistant currently pins for `aws_s3`) loads CA
+  certificates on the event loop, and the built-in `aws_s3` integration logs the
+  same thing. It goes away once Home Assistant ships `aiobotocore` ≥ 3.8.0;
+  backups are unaffected.
 
 ## Backend compatibility
 
