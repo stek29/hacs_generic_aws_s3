@@ -7,8 +7,13 @@ Steps, in order:
 
 1. Derive a compatible Python version from the target HA release's own PyPI
    metadata (``requires_python``) and create the venv with it.
-2. Install exactly that HA version plus a HA-matched
-   ``pytest-homeassistant-custom-component`` and the test runner.
+2. Find the ``pytest-homeassistant-custom-component`` release that pins this
+   exact HA version (every release pins one ``homeassistant==<version>``
+   exactly; see ``_phacc_version_for``) and install it alongside that HA
+   version and the test runner. Pinning explicitly, rather than letting the
+   resolver pick, avoids it silently backtracking to an unrelated ancient
+   release -- with its own ancient, incompatible pytest -- when the matching
+   release hasn't been published yet (e.g. right after a new HA release).
 3. Read the *installed* HA's ``aws_s3`` and ``backup`` manifests and install
    their requirements under that release's ``package_constraints.txt`` so
    botocore/boto3 stay on HA's pinned versions rather than whatever pip would
@@ -53,12 +58,63 @@ def _python_minor_for(ha_version: str) -> str:
     return f"{sys.version_info.major}.{sys.version_info.minor}"
 
 
+def _phacc_version_for(ha_version: str, max_lookback: int = 40) -> str | None:
+    """Find the phacc release whose pin is ``homeassistant=={ha_version}``.
+
+    Checks the ``max_lookback`` newest releases (newest first, since a match
+    -- if published at all -- is always near the tip) and returns ``None``
+    if none of them pin this exact HA version yet.
+    """
+    url = "https://pypi.org/pypi/pytest-homeassistant-custom-component/json"
+    with urllib.request.urlopen(url, timeout=30) as resp:
+        meta = json.load(resp)
+
+    def _numeric_key(v: str) -> list[int] | None:
+        parts = v.split(".")
+        if all(p.isdigit() for p in parts):
+            return [int(p) for p in parts]
+        return None
+
+    versions = sorted(
+        (v for v, files in meta["releases"].items() if files and _numeric_key(v)),
+        key=_numeric_key,
+        reverse=True,
+    )
+
+    needle = f"homeassistant=={ha_version}"
+    for version in versions[:max_lookback]:
+        v_url = (
+            "https://pypi.org/pypi/"
+            f"pytest-homeassistant-custom-component/{version}/json"
+        )
+        with urllib.request.urlopen(v_url, timeout=30) as resp:
+            v_meta = json.load(resp)
+        requires = v_meta["info"].get("requires_dist") or []
+        if any(r.strip() == needle for r in requires):
+            return version
+    return None
+
+
 def main() -> int:
     """Provision the lane named by ``sys.argv`` and return a process exit code."""
     ha_version, venv_dir = sys.argv[1], sys.argv[2]
     venv = Path(venv_dir)
     py_minor = _python_minor_for(ha_version)
     print(f"::notice::HA {ha_version} -> Python {py_minor}", flush=True)
+
+    phacc_version = _phacc_version_for(ha_version)
+    if phacc_version is None:
+        print(
+            "::error::no pytest-homeassistant-custom-component release pins "
+            f"homeassistant=={ha_version} yet",
+            flush=True,
+        )
+        return 1
+    print(
+        f"::notice::pytest-homeassistant-custom-component=={phacc_version} "
+        f"pins homeassistant=={ha_version}",
+        flush=True,
+    )
 
     _run("uv", "venv", "--python", py_minor, str(venv))
     py = str(venv / "bin" / "python")
@@ -70,7 +126,7 @@ def main() -> int:
         "--python",
         py,
         f"homeassistant=={ha_version}",
-        "pytest-homeassistant-custom-component",
+        f"pytest-homeassistant-custom-component=={phacc_version}",
         "pytest",
         "pytest-asyncio",
         "pytest-cov",
