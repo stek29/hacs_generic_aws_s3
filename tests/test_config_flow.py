@@ -15,7 +15,6 @@ from homeassistant.config_entries import SOURCE_USER
 from homeassistant.core import HomeAssistant
 from homeassistant.data_entry_flow import FlowResultType
 import pytest
-from pytest_homeassistant_custom_component.common import MockConfigEntry
 
 from custom_components.generic_s3.const import (
     CONF_ACCESS_KEY_ID,
@@ -27,6 +26,7 @@ from custom_components.generic_s3.const import (
     CONF_SECRET_ACCESS_KEY,
     DOMAIN,
 )
+from ha_compat import MockConfigEntry
 
 pytestmark = pytest.mark.usefixtures("mock_session")
 

@@ -6,9 +6,9 @@ on:
   pull_request:
   workflow_dispatch:
   schedule:
-    # Daily so a newly published stable Home Assistant release is tested
+    # Weekly so a newly published stable Home Assistant release is tested
     # without any repository commit.
-    - cron: "41 4 * * *"
+    - cron: "41 4 * * 1"
 
 permissions:
   contents: read

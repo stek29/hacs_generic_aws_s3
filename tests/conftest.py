@@ -9,7 +9,6 @@ from unittest.mock import AsyncMock, MagicMock
 from homeassistant.core import HomeAssistant
 from homeassistant.setup import async_setup_component
 import pytest
-from pytest_homeassistant_custom_component.common import MockConfigEntry
 
 from custom_components.generic_s3.const import (
     CONF_ACCESS_KEY_ID,
@@ -21,8 +20,9 @@ from custom_components.generic_s3.const import (
     CONF_SECRET_ACCESS_KEY,
     DOMAIN,
 )
+from ha_compat import PYTEST_PLUGIN, MockConfigEntry
 
-pytest_plugins = ["pytest_homeassistant_custom_component"]
+pytest_plugins = [PYTEST_PLUGIN]
 
 CONNECTION: dict[str, Any] = {
     CONF_ENDPOINT_URL: "https://s3.example.com",

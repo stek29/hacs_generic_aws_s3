@@ -7,13 +7,12 @@ Steps, in order:
 
 1. Derive a compatible Python version from the target HA release's own PyPI
    metadata (``requires_python``) and create the venv with it.
-2. Find the ``pytest-homeassistant-custom-component`` release that pins this
-   exact HA version (every release pins one ``homeassistant==<version>``
-   exactly; see ``_phacc_version_for``) and install it alongside that HA
-   version and the test runner. Pinning explicitly, rather than letting the
-   resolver pick, avoids it silently backtracking to an unrelated ancient
-   release -- with its own ancient, incompatible pytest -- when the matching
-   release hasn't been published yet (e.g. right after a new HA release).
+2. Pick a test-helper package that pins this exact HA version (see
+   ``_resolve_test_package``) and install it alongside that HA version and
+   the test runner. Pinning explicitly, rather than letting the resolver
+   pick, avoids it silently backtracking to an unrelated ancient release --
+   with its own ancient, incompatible pytest -- when the matching release
+   hasn't been published yet (e.g. right after a new HA release).
 3. Read the *installed* HA's ``aws_s3`` and ``backup`` manifests and install
    their requirements under that release's ``package_constraints.txt`` so
    botocore/boto3 stay on HA's pinned versions rather than whatever pip would
@@ -32,6 +31,7 @@ import json
 from pathlib import Path
 import subprocess
 import sys
+import urllib.error
 import urllib.request
 
 
@@ -56,6 +56,18 @@ def _python_minor_for(ha_version: str) -> str:
         if len(parts) >= 2 and parts[0].isdigit() and parts[1].isdigit():
             return f"{parts[0]}.{parts[1]}"
     return f"{sys.version_info.major}.{sys.version_info.minor}"
+
+
+def _pypi_release_exists(project: str, version: str) -> bool:
+    """Whether ``project``'s PyPI page lists a (non-withdrawn) ``version``."""
+    url = f"https://pypi.org/pypi/{project}/{version}/json"
+    try:
+        with urllib.request.urlopen(url, timeout=30):
+            return True
+    except urllib.error.HTTPError as exc:
+        if exc.code == 404:
+            return False
+        raise
 
 
 def _phacc_version_for(ha_version: str, max_lookback: int = 40) -> str | None:
@@ -95,6 +107,31 @@ def _phacc_version_for(ha_version: str, max_lookback: int = 40) -> str | None:
     return None
 
 
+def _resolve_test_package(ha_version: str) -> tuple[str, str] | None:
+    """Pick the test-helper package/version pair that pins ``ha_version``.
+
+    Home Assistant core has published its own ``pytest-homeassistant``
+    package (release numbers matching ``homeassistant`` exactly) since
+    2026.11.0; the previously used, externally maintained
+    ``pytest-homeassistant-custom-component`` stopped receiving new pins
+    around the same time (its automation broke, and its README now points
+    users at the new package -- see
+    https://github.com/MatthewFlamm/pytest-homeassistant-custom-component/pull/261).
+    Prefer the new package, since it is the one still being maintained
+    going forward; fall back to the old one's historical pins for releases
+    it never covered (e.g. this project's documented minimum).
+
+    Returns ``(distribution_name, version)`` or ``None`` if neither package
+    has a release pinning ``ha_version``.
+    """
+    if _pypi_release_exists("pytest-homeassistant", ha_version):
+        return ("pytest-homeassistant", ha_version)
+    phacc_version = _phacc_version_for(ha_version)
+    if phacc_version is not None:
+        return ("pytest-homeassistant-custom-component", phacc_version)
+    return None
+
+
 def main() -> int:
     """Provision the lane named by ``sys.argv`` and return a process exit code."""
     ha_version, venv_dir = sys.argv[1], sys.argv[2]
@@ -102,17 +139,18 @@ def main() -> int:
     py_minor = _python_minor_for(ha_version)
     print(f"::notice::HA {ha_version} -> Python {py_minor}", flush=True)
 
-    phacc_version = _phacc_version_for(ha_version)
-    if phacc_version is None:
+    resolved = _resolve_test_package(ha_version)
+    if resolved is None:
         print(
-            "::error::no pytest-homeassistant-custom-component release pins "
+            "::error::no pytest-homeassistant or "
+            "pytest-homeassistant-custom-component release pins "
             f"homeassistant=={ha_version} yet",
             flush=True,
         )
         return 1
+    test_pkg, test_pkg_version = resolved
     print(
-        f"::notice::pytest-homeassistant-custom-component=={phacc_version} "
-        f"pins homeassistant=={ha_version}",
+        f"::notice::{test_pkg}=={test_pkg_version} pins homeassistant=={ha_version}",
         flush=True,
     )
 
@@ -126,7 +164,7 @@ def main() -> int:
         "--python",
         py,
         f"homeassistant=={ha_version}",
-        f"pytest-homeassistant-custom-component=={phacc_version}",
+        f"{test_pkg}=={test_pkg_version}",
         "pytest",
         "pytest-asyncio",
         "pytest-cov",
@@ -163,11 +201,11 @@ def main() -> int:
 
     _run("uv", "pip", "check", "--python", py)
 
-    resolved = _capture(
+    resolved_ha = _capture(
         py, "-c", "from homeassistant.const import __version__; print(__version__)"
     ).strip()
-    if resolved != ha_version:
-        print(f"::error::resolved HA {resolved} != requested {ha_version}")
+    if resolved_ha != ha_version:
+        print(f"::error::resolved HA {resolved_ha} != requested {ha_version}")
         return 1
 
     summary = _capture(
@@ -178,7 +216,7 @@ def main() -> int:
         "import importlib.metadata as m;"
         "print('HA', v, '| Python', sys.version.split()[0],"
         "'| aiobotocore', aiobotocore.__version__, '| botocore', botocore.__version__,"
-        "'| phacc', m.version('pytest-homeassistant-custom-component'))",
+        f"'| {test_pkg}', m.version({test_pkg!r}))",
     ).strip()
     print(f"::notice::{summary}", flush=True)
     return 0

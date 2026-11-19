@@ -33,12 +33,12 @@ from homeassistant.components.aws_s3.backup import MULTIPART_MIN_PART_SIZE_BYTES
 from homeassistant.components.backup import AgentBackup
 from homeassistant.core import HomeAssistant
 import pytest
-from pytest_homeassistant_custom_component.common import MockConfigEntry
 
 from custom_components.generic_s3.backup import S3BackupAgent
 from custom_components.generic_s3.client import async_get_client
 from custom_components.generic_s3.const import DOMAIN
 from custom_components.generic_s3.models import GenericS3RuntimeData
+from ha_compat import MockConfigEntry
 
 pytestmark = [pytest.mark.live, pytest.mark.usefixtures("socket_enabled")]
 

@@ -10,11 +10,11 @@ from homeassistant.config_entries import ConfigEntryState
 from homeassistant.const import EVENT_HOMEASSISTANT_STOP
 from homeassistant.core import HomeAssistant
 import pytest
-from pytest_homeassistant_custom_component.common import MockConfigEntry
 
 from custom_components.generic_s3 import async_setup_entry
 from custom_components.generic_s3.backup import async_get_backup_agents
 from custom_components.generic_s3.const import DOMAIN
+from ha_compat import MockConfigEntry
 
 pytestmark = pytest.mark.usefixtures("mock_session")
 

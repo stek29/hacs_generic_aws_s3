@@ -17,7 +17,6 @@ from homeassistant.components.backup import AgentBackup, async_get_manager
 from homeassistant.core import HomeAssistant
 from homeassistant.setup import async_setup_component
 import pytest
-from pytest_homeassistant_custom_component.common import MockConfigEntry
 
 from custom_components.generic_s3.backup import (
     S3BackupAgent,
@@ -26,6 +25,7 @@ from custom_components.generic_s3.backup import (
 )
 from custom_components.generic_s3.const import DATA_BACKUP_AGENT_LISTENERS, DOMAIN
 from custom_components.generic_s3.models import GenericS3RuntimeData
+from ha_compat import MockConfigEntry
 
 pytestmark = pytest.mark.usefixtures("mock_session")
 
