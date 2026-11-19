@@ -180,17 +180,18 @@ def main() -> int:
         ).strip()
     )
     # homeassistant's own import-time httpx aliasing (`httpx2.alias_httpx()`)
-    # raises if anything has already imported the real ``httpx`` -- which an
-    # unrelated pytest plugin can do first, since pytest11 entry points load
-    # in filesystem-scan order, not any order we control. A sitecustomize.py
-    # runs at interpreter start, before pytest's own plugin autoload, so it
-    # imports the test package (and through it homeassistant) deterministically
-    # early regardless of that scan order.
-    (site.parent / "sitecustomize.py").write_text(
-        "try:\n"
-        "    import pytest_homeassistant  # noqa: F401\n"
-        "except ImportError:\n"
-        "    import pytest_homeassistant_custom_component  # noqa: F401\n"
+    # raises if anything has already imported the real ``httpx`` first --
+    # which something else in the venv reliably does (a `.pth` file's own
+    # "import" line, processed before sitecustomize.py and in filesystem-scan
+    # order, not any order we control). `site.addsitedir()` runs `.pth` import
+    # lines in *sorted* filename order, so a name starting with a digit (every
+    # other `.pth` here starts with a letter or underscore) guarantees this
+    # one's import line -- doing the aliasing ourselves -- runs first.
+    # httpx2 only exists from HA 2026.11 on; older lanes (our documented
+    # minimum) still use plain httpx and need no aliasing.
+    (site.parent / "0-homeassistant-httpx-alias.pth").write_text(
+        "import importlib as i, importlib.util as u;"
+        ' i.import_module("httpx2").alias_httpx() if u.find_spec("httpx2") else None\n'
     )
 
     constraints = site / "package_constraints.txt"
