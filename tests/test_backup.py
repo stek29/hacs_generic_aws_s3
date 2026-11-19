@@ -49,7 +49,8 @@ class _Body:
     def __init__(self, payload: bytes) -> None:
         self._payload = payload
 
-    async def read(self) -> bytes:
+    async def read(self, amt: int | None = None) -> bytes:
+        """``amt`` is accepted to match aiobotocore's ``StreamingBody.read``."""
         return self._payload
 
     async def iter_chunks(self) -> AsyncIterator[bytes]:
