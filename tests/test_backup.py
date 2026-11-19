@@ -48,10 +48,14 @@ TAR_KEY, META_KEY = (f"ha/{n}" for n in suggested_filenames(BACKUP))
 class _Body:
     def __init__(self, payload: bytes) -> None:
         self._payload = payload
+        self._pos = 0
 
     async def read(self, amt: int | None = None) -> bytes:
-        """``amt`` is accepted to match aiobotocore's ``StreamingBody.read``."""
-        return self._payload
+        """Chunked like aiobotocore's ``StreamingBody.read``: ``b""`` at EOF."""
+        end = len(self._payload) if amt is None else self._pos + amt
+        chunk = self._payload[self._pos : end]
+        self._pos += len(chunk)
+        return chunk
 
     async def iter_chunks(self) -> AsyncIterator[bytes]:
         yield self._payload
