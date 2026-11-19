@@ -179,6 +179,20 @@ def main() -> int:
             "print(pathlib.Path(homeassistant.__file__).parent)",
         ).strip()
     )
+    # homeassistant's own import-time httpx aliasing (`httpx2.alias_httpx()`)
+    # raises if anything has already imported the real ``httpx`` -- which an
+    # unrelated pytest plugin can do first, since pytest11 entry points load
+    # in filesystem-scan order, not any order we control. A sitecustomize.py
+    # runs at interpreter start, before pytest's own plugin autoload, so it
+    # imports the test package (and through it homeassistant) deterministically
+    # early regardless of that scan order.
+    (site.parent / "sitecustomize.py").write_text(
+        "try:\n"
+        "    import pytest_homeassistant  # noqa: F401\n"
+        "except ImportError:\n"
+        "    import pytest_homeassistant_custom_component  # noqa: F401\n"
+    )
+
     constraints = site / "package_constraints.txt"
     reqs: list[str] = []
     for component in ("aws_s3", "backup"):

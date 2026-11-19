@@ -55,6 +55,9 @@ class _Body:
     async def iter_chunks(self) -> AsyncIterator[bytes]:
         yield self._payload
 
+    def close(self) -> None:
+        """No-op: matches aiobotocore's (sync) ``StreamingBody.close``."""
+
 
 class _Paginator:
     def __init__(self, pages: list[dict[str, Any]]) -> None:
